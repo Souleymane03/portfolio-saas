@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowLeft, ArrowUp, Check, ExternalLink, GripVertical, Image, LoaderCircle, Monitor, Palette, Plus, Save, Settings2, Trash2, Type, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, ExternalLink, GripVertical, LoaderCircle, Monitor, Palette, Plus, Save, Settings2, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { defaultSection } from "@/lib/templates";

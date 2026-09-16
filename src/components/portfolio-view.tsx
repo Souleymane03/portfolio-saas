@@ -29,14 +29,14 @@ export function PortfolioView({ title, theme, sections, preview = false }: { tit
             {sections.slice(1, 5).map((item) => <span key={item.id}>{item.title}</span>)}
           </nav>
         </header>
-        {sections.map((section) => <PortfolioSectionView section={section} key={section.id} preview={preview} />)}
+        {sections.map((section) => <PortfolioSectionView section={section} key={section.id} />)}
         <footer className="flex justify-between border-t border-current/15 py-8 text-[.7em] opacity-60"><span>© {new Date().getFullYear()} {title}</span><span>Créé avec folio.</span></footer>
       </div>
     </div>
   );
 }
 
-function PortfolioSectionView({ section, preview }: { section: PortfolioSection; preview: boolean }) {
+function PortfolioSectionView({ section }: { section: PortfolioSection }) {
   const { data, type } = section;
   if (type === "hero") return (
     <section style={{ paddingBlock: "var(--pf-space)" }} className="min-h-[60vh] content-center">

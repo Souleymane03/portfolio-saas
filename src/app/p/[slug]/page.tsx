@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { PortfolioView } from "@/components/portfolio-view";
 import { db } from "@/db";

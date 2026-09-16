@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { ArrowUpRight, Edit3, Eye, Plus } from "lucide-react";
+import { ArrowUpRight, Edit3, Eye } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CreatePortfolio } from "@/components/create-portfolio";
