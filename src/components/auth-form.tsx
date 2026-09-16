@@ -36,9 +36,9 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       <p className="label text-[#6c5ce7]">{signup ? "Nouveau départ" : "Heureux de vous revoir"}</p>
       <h1 className="mb-7 text-3xl font-black">{signup ? "Créez votre espace" : "Connectez-vous"}</h1>
       <div className="space-y-5">
-        {signup && <label><span className="label">Votre nom</span><input className="input" name="name" required placeholder="Camille Martin" /></label>}
-        <label><span className="label">Adresse e-mail</span><input className="input" name="email" type="email" required placeholder="vous@exemple.com" /></label>
-        <label><span className="label">Mot de passe</span><input className="input" name="password" type="password" minLength={8} required placeholder="8 caractères minimum" /></label>
+        {signup && <label><span className="label">Votre nom</span><input className="input" name="name" autoComplete="name" required placeholder="Camille Martin" /></label>}
+        <label><span className="label">Adresse e-mail</span><input className="input" name="email" type="email" autoComplete="email" required placeholder="vous@exemple.com" /></label>
+        <label><span className="label">Mot de passe</span><input className="input" name="password" type="password" autoComplete={signup ? "new-password" : "current-password"} minLength={8} required placeholder="8 caractères minimum" /></label>
       </div>
       {error && <p className="mt-5 rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
       <button disabled={loading} className="btn btn-dark mt-7 w-full">
