@@ -19,7 +19,7 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
     status: initialPortfolio.status === "published" ? "published" as const : "draft" as const,
     sections: normalizeSections(initialPortfolio.sections),
   }), [initialPortfolio]);
-  const [portfolio, setPortfolio] = useState(initial);
+  const [portfolio, setPortfolio] = useState<EditorPortfolio>(initial);
   const [selectedId, setSelectedId] = useState(initial.sections[0]?.id);
   const [panel, setPanel] = useState<"content" | "theme" | "settings">("content");
   const [saving, setSaving] = useState(false);
@@ -85,7 +85,7 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-black/10 bg-white px-3 md:px-5">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="grid size-9 place-items-center rounded-full border border-black/15" aria-label="Retour"><ArrowLeft size={17} /></Link>
-          <div><input aria-label="Nom du portfolio" className="max-w-36 font-black outline-none md:max-w-xs" value={portfolio.title} onChange={(event) => update({ title: event.target.value })} /><p className="text-[10px] font-semibold uppercase tracking-wider text-black/35">{portfolio.status === "published" ? "Publié" : portfolio.status === "unlisted" ? "Non répertorié" : "Brouillon"}</p></div>
+          <div><input aria-label="Nom du portfolio" className="max-w-36 font-black outline-none md:max-w-xs" value={portfolio.title} onChange={(event) => update({ title: event.target.value })} /><p className="text-[10px] font-semibold uppercase tracking-wider text-black/35">{portfolio.status === "published" ? "Publié" : "Brouillon"}</p></div>
         </div>
         <div className="flex items-center gap-2">
           {error && <span className="hidden text-xs font-semibold text-red-600 md:inline">{error}</span>}
