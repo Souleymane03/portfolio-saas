@@ -26,6 +26,7 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [mobileCanvas, setMobileCanvas] = useState(false);
   const draggedId = useRef<string | null>(null);
   const firstRender = useRef(true);
   const selected = useMemo(() => portfolio.sections.find((item) => item.id === selectedId), [portfolio.sections, selectedId]);
@@ -72,9 +73,13 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
   }
 
   async function publish() {
+    const previous = portfolio;
     const next = { ...portfolio, status: "published" as const };
     setPortfolio(next);
-    if (!(await save(next, true))) return;
+    if (!(await save(next, true))) {
+      setPortfolio(previous);
+      return;
+    }
     await navigator.clipboard.writeText(`${window.location.origin}/p/${next.slug}`);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2200);
@@ -88,6 +93,7 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
           <div><input aria-label="Nom du portfolio" className="max-w-36 font-black outline-none md:max-w-xs" value={portfolio.title} onChange={(event) => update({ title: event.target.value })} /><p className="text-[10px] font-semibold uppercase tracking-wider text-black/35">{portfolio.status === "published" ? "Publié" : "Brouillon"}</p></div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setMobileCanvas((current) => !current)} className="btn btn-light !min-h-9 !px-3 !py-1 md:hidden"><Monitor size={15} />{mobileCanvas ? "Éditer" : "Aperçu"}</button>
           {error && <span className="hidden text-xs font-semibold text-red-600 md:inline">{error}</span>}
           <span className="hidden items-center gap-1 text-xs font-semibold text-black/40 md:flex">{saving ? <LoaderCircle className="animate-spin" size={14} /> : saved ? <Check size={14} /> : null}{saving ? "Enregistrement…" : saved ? "Enregistré" : "Sauvegarde auto"}</span>
           {portfolio.status === "published" && <Link target="_blank" href={`/p/${portfolio.slug}`} className="btn btn-light !min-h-9 !px-3 !py-1"><ExternalLink size={15} /><span className="hidden sm:inline">Voir</span></Link>}
@@ -96,7 +102,7 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
       </header>
 
       <div className="grid min-h-0 flex-1 md:grid-cols-[380px_1fr]">
-        <aside className="flex min-h-0 flex-col border-r border-black/10 bg-white">
+        <aside className={`${mobileCanvas ? "hidden" : "flex"} min-h-0 flex-col border-r border-black/10 bg-white md:flex`}>
           <div className="grid grid-cols-3 border-b border-black/10 p-2">
             {([["content", Monitor, "Contenu"], ["theme", Palette, "Style"], ["settings", Settings2, "Publier"]] as const).map(([id, Icon, label]) => (
               <button key={id} onClick={() => setPanel(id)} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-bold ${panel === id ? "bg-black text-white" : "text-black/50 hover:bg-black/5"}`}><Icon size={15} />{label}</button>
@@ -127,13 +133,12 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
             {panel === "settings" && <SettingsPanel portfolio={portfolio} update={update} publish={publish} copied={copied} />}
           </div>
         </aside>
-        <section className="hidden min-h-0 overflow-auto p-5 md:block">
+        <section className={`${mobileCanvas ? "block" : "hidden"} min-h-0 overflow-auto p-2 md:block md:p-5`}>
           <div className="mx-auto min-h-full max-w-[1280px] overflow-hidden rounded-xl border border-black/15 bg-white shadow-xl">
             <PortfolioView
               title={portfolio.title}
               theme={portfolio.theme}
               sections={portfolio.sections}
-              preview
               onInlineEdit={(sectionId, field, value) => setPortfolio((current) => ({
                 ...current,
                 sections: current.sections.map((item) => item.id === sectionId ? { ...item, data: { ...item.data, [field]: value } } : item),
@@ -223,7 +228,10 @@ function SettingsPanel({ portfolio, update, publish, copied }: { portfolio: Edit
 
 function normalizeSections(sections: PortfolioSection[]): PortfolioSection[] {
   const sorted = [...sections].sort((a, b) => (a.order ?? sections.indexOf(a)) - (b.order ?? sections.indexOf(b)));
-  const productSections = sorted.filter((item) => fixedTypes.includes(item.type as ProductSectionType));
+  const productSections = sorted.filter((item, index) =>
+    fixedTypes.includes(item.type as ProductSectionType)
+    && sorted.findIndex((candidate) => candidate.type === item.type) === index
+  );
   const fallbacks: Record<ProductSectionType, PortfolioSection["data"]> = {
     hero: { heading: "Votre grand titre", text: "Présentez votre univers.", cta: "Voir mes projets", ctaUrl: "#projets" },
     projects: { items: [{ title: "Premier projet", description: "Présentez ce que vous avez réalisé." }] },

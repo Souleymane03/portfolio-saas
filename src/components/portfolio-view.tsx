@@ -9,13 +9,13 @@ const fonts = {
 const spacing = { compact: "clamp(48px, 7vw, 80px)", comfortable: "clamp(64px, 9vw, 120px)", airy: "clamp(88px, 12vw, 170px)" };
 const radii = { none: "0px", soft: "16px", round: "34px" };
 
-export function PortfolioView({ title, theme, sections, preview = false, onInlineEdit }: {
+export function PortfolioView({ title, theme, sections, onInlineEdit }: {
   title: string;
   theme: PortfolioTheme;
   sections: PortfolioSection[];
-  preview?: boolean;
   onInlineEdit?: (sectionId: string, field: "heading" | "text", value: string) => void;
 }) {
+  const orderedSections = [...sections].sort((a, b) => (a.order ?? sections.indexOf(a)) - (b.order ?? sections.indexOf(b)));
   const style = {
     "--pf-primary": theme.primary,
     "--pf-bg": theme.background,
@@ -27,15 +27,15 @@ export function PortfolioView({ title, theme, sections, preview = false, onInlin
     fontFamily: fonts[theme.font],
   } as CSSProperties;
   return (
-    <div style={style} className={`min-h-full overflow-hidden ${preview ? "text-[11px]" : ""}`}>
+    <div style={style} className="min-h-full overflow-hidden">
       <div className="mx-auto max-w-[1200px] px-[clamp(24px,6vw,80px)]">
         <header className="flex items-center justify-between border-b border-current/15 py-6">
           <strong className="tracking-tight">{title}</strong>
           <nav className="flex gap-5 text-[.72em] font-bold uppercase tracking-wider">
-            {sections.slice(1, 5).map((item) => <span key={item.id}>{item.title}</span>)}
+            {orderedSections.filter((item) => item.type !== "hero").map((item) => <span key={item.id}>{item.title}</span>)}
           </nav>
         </header>
-        {sections.map((section) => <PortfolioSectionView section={section} key={section.id} onInlineEdit={onInlineEdit} />)}
+        {orderedSections.map((section) => <PortfolioSectionView section={section} key={section.id} onInlineEdit={onInlineEdit} />)}
         <footer className="flex justify-between border-t border-current/15 py-8 text-[.7em] opacity-60"><span>© {new Date().getFullYear()} {title}</span><span>Créé avec folio.</span></footer>
       </div>
     </div>
@@ -128,6 +128,7 @@ function InlineText({ tag: Tag, className, value = "", sectionId, field, onEdit 
       className={`${className} ${onEdit ? "cursor-text rounded-sm outline-none transition hover:ring-2 hover:ring-[var(--pf-primary)] focus:ring-2 focus:ring-[var(--pf-primary)]" : ""}`}
       contentEditable={Boolean(onEdit)}
       suppressContentEditableWarning
+      onInput={(event) => onEdit?.(sectionId, field, event.currentTarget.textContent ?? "")}
       onBlur={(event) => onEdit?.(sectionId, field, event.currentTarget.textContent ?? "")}
     >
       {value}
