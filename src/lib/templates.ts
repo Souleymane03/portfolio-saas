@@ -16,7 +16,7 @@ export type PortfolioTemplate = {
   createSections: () => PortfolioSection[];
 };
 
-export const templates: PortfolioTemplate[] = [
+const legacyTemplates: PortfolioTemplate[] = [
   {
     id: "studio",
     name: "Studio",
@@ -91,6 +91,96 @@ export const templates: PortfolioTemplate[] = [
   },
 ];
 
+const productTemplate = (
+  id: "creatif" | "cv_freelance" | "agence" | "photo",
+  name: string,
+  genre: string,
+  description: string,
+  accent: string,
+  theme: PortfolioTheme,
+  createContent: () => PortfolioSection[],
+): PortfolioTemplate => ({
+  id,
+  name,
+  genre,
+  description,
+  accent,
+  theme,
+  createSections: () => createContent().map((item, order) => ({ ...item, order })),
+});
+
+export const templates: PortfolioTemplate[] = [
+  productTemplate(
+    "creatif",
+    "Studio",
+    "Créatif",
+    "Une grille éditoriale audacieuse pour présenter une pratique et ses projets.",
+    "#ff5c35",
+    legacyTemplates[0].theme,
+    () => [
+      section("hero", "Hero", { eyebrow: "Designer indépendant · Paris", heading: "Des idées qui prennent forme.", text: "Identité, direction artistique et expériences numériques.", cta: "Voir mes projets", ctaUrl: "#projets" }),
+      section("projects", "Projets", { items: [
+        { title: "Maison Matisse", description: "Une identité solaire pour un lieu de vie méditerranéen.", image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1200&q=80", url: "#" },
+        { title: "Folio Objects", description: "Un catalogue digital pour des objets singuliers.", image: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80", url: "#" },
+      ] }),
+      section("about", "À propos", { heading: "Petit studio, grandes idées.", text: "Je collabore avec des équipes ambitieuses pour créer des marques utiles, belles et cohérentes.", image: "" }),
+      section("contact", "Contact", { email: "bonjour@studio.fr", phone: "", text: "Parlons de votre prochain projet.", links: [{ label: "Instagram", url: "https://instagram.com" }], messageEnabled: true }),
+    ],
+  ),
+  productTemplate(
+    "cv_freelance",
+    "Career",
+    "CV · Freelance",
+    "Un profil clair et crédible pour raconter un parcours et convertir des missions.",
+    "#6558f5",
+    legacyTemplates[2].theme,
+    () => [
+      section("hero", "Hero", { eyebrow: "Product Engineer · Freelance", heading: "Je transforme des problèmes complexes en produits simples.", text: "7 ans d’expérience en TypeScript, React et systèmes distribués.", cta: "Me contacter", ctaUrl: "#contact" }),
+      section("projects", "Projets", { items: [
+        { title: "Plateforme Nova", description: "Refonte d’une plateforme B2B utilisée par 40 000 clients.", url: "#" },
+        { title: "Open Metrics", description: "Suite open source de monitoring web.", url: "https://github.com" },
+      ] }),
+      section("about", "À propos", { heading: "Produit, code et transmission.", text: "J’accompagne les équipes de la stratégie jusqu’à la mise en production, avec une attention particulière à la qualité et à l’autonomie." }),
+      section("contact", "Contact", { email: "alex@example.com", phone: "+33 6 00 00 00 00", text: "Disponible pour une nouvelle mission.", links: [{ label: "LinkedIn", url: "https://linkedin.com" }, { label: "GitHub", url: "https://github.com" }], messageEnabled: true }),
+    ],
+  ),
+  productTemplate(
+    "agence",
+    "Independent",
+    "Agence",
+    "Une vitrine chaleureuse qui présente l’expertise, les réalisations et le contact.",
+    "#087f5b",
+    legacyTemplates[3].theme,
+    () => [
+      section("hero", "Hero", { eyebrow: "Agence de stratégie & contenu", heading: "Votre expertise mérite d’être comprise.", text: "Nous aidons les entreprises engagées à trouver les mots justes et une voix qui leur ressemble.", cta: "Découvrir nos projets", ctaUrl: "#projets" }),
+      section("projects", "Projets", { items: [
+        { title: "Noma", description: "Plateforme de marque et campagne de lancement.", image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80", url: "#" },
+        { title: "Sobri", description: "Positionnement, identité verbale et site éditorial.", image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80", url: "#" },
+      ] }),
+      section("about", "À propos", { heading: "Clarté, écoute, impact.", text: "Une équipe senior et une méthode collaborative, de l’audit à la livraison, pour créer des expériences qui servent vos objectifs." }),
+      section("contact", "Contact", { email: "bonjour@agence.fr", phone: "+33 1 84 80 20 20", text: "Construisons la suite ensemble.", links: [{ label: "LinkedIn", url: "https://linkedin.com" }], messageEnabled: true }),
+    ],
+  ),
+  productTemplate(
+    "photo",
+    "Lens",
+    "Photo",
+    "Un portfolio immersif et minimal pensé pour laisser toute la place aux images.",
+    "#b8ff3d",
+    legacyTemplates[1].theme,
+    () => [
+      section("hero", "Hero", { eyebrow: "Photographe documentaire", heading: "Histoires humaines, lumière naturelle.", text: "Séries réalisées entre Dakar, Marseille et Montréal.", cta: "Voir les séries", ctaUrl: "#projets", image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd4297?auto=format&fit=crop&w=1600&q=80" }),
+      section("projects", "Projets", { items: [
+        { title: "Après la pluie", description: "Dakar · 2026", image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80" },
+        { title: "Le grand bleu", description: "Marseille · 2025", image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd4297?auto=format&fit=crop&w=1200&q=80" },
+        { title: "Nuits blanches", description: "Montréal · 2024", image: "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=1200&q=80" },
+      ] }),
+      section("about", "À propos", { heading: "Observer avant de cadrer.", text: "Je photographie les gestes, les lieux et les liens qui racontent notre époque." }),
+      section("contact", "Contact", { email: "hello@lens.photo", phone: "", text: "Commandes éditoriales, portraits et collaborations.", links: [{ label: "Instagram", url: "https://instagram.com" }], messageEnabled: false }),
+    ],
+  ),
+];
+
 export const defaultSection = (type: PortfolioSection["type"]): PortfolioSection => {
   const names: Record<PortfolioSection["type"], string> = {
     hero: "Introduction", about: "À propos", projects: "Projets", experience: "Expérience",
@@ -105,4 +195,11 @@ export const defaultSection = (type: PortfolioSection["type"]): PortfolioSection
         : { heading: names[type], text: "Écrivez votre contenu ici." });
 };
 
-export const getTemplate = (id: string) => templates.find((template) => template.id === id) ?? templates[0];
+const legacyAliases: Record<string, string> = {
+  studio: "creatif",
+  career: "cv_freelance",
+  independent: "agence",
+  lens: "photo",
+};
+
+export const getTemplate = (id: string) => templates.find((template) => template.id === (legacyAliases[id] ?? id)) ?? templates[0];

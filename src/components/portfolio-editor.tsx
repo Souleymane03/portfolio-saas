@@ -1,65 +1,83 @@
 "use client";
 
-import { ArrowDown, ArrowLeft, ArrowUp, Check, ExternalLink, GripVertical, LoaderCircle, Monitor, Palette, Plus, Save, Settings2, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, ExternalLink, GripVertical, LoaderCircle, Monitor, Palette, Plus, Rocket, Settings2, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { defaultSection } from "@/lib/templates";
-import type { Portfolio, PortfolioSection, PortfolioStatus, SectionType } from "@/lib/types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Portfolio, PortfolioSection, ProductSectionType } from "@/lib/types";
 import { PortfolioView } from "./portfolio-view";
 
-const sectionNames: Record<SectionType, string> = {
-  hero: "Hero", about: "À propos", projects: "Projets / Galerie", experience: "Expérience",
-  skills: "Compétences", testimonials: "Témoignages", contact: "Contact", custom: "Texte / Image",
+const sectionNames: Record<ProductSectionType, string> = {
+  hero: "Hero", projects: "Projets", about: "À propos", contact: "Contact",
 };
-const itemSections: SectionType[] = ["projects", "experience", "skills", "testimonials"];
+const fixedTypes: ProductSectionType[] = ["hero", "projects", "about", "contact"];
 
 type EditorPortfolio = Omit<Portfolio, "createdAt" | "updatedAt">;
 
 export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: EditorPortfolio }) {
-  const [portfolio, setPortfolio] = useState(initialPortfolio);
-  const [selectedId, setSelectedId] = useState(initialPortfolio.sections[0]?.id);
+  const initial = useMemo(() => ({
+    ...initialPortfolio,
+    status: initialPortfolio.status === "published" ? "published" as const : "draft" as const,
+    sections: normalizeSections(initialPortfolio.sections),
+  }), [initialPortfolio]);
+  const [portfolio, setPortfolio] = useState(initial);
+  const [selectedId, setSelectedId] = useState(initial.sections[0]?.id);
   const [panel, setPanel] = useState<"content" | "theme" | "settings">("content");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const draggedId = useRef<string | null>(null);
+  const firstRender = useRef(true);
   const selected = useMemo(() => portfolio.sections.find((item) => item.id === selectedId), [portfolio.sections, selectedId]);
 
   const update = (patch: Partial<EditorPortfolio>) => setPortfolio((current) => ({ ...current, ...patch }));
-  const updateSection = (patch: Partial<PortfolioSection>) => update({ sections: portfolio.sections.map((item) => item.id === selectedId ? { ...item, ...patch } : item) });
-  const updateData = (patch: Partial<PortfolioSection["data"]>) => selected && updateSection({ data: { ...selected.data, ...patch } });
+  const updateData = (patch: Partial<PortfolioSection["data"]>) => setPortfolio((current) => ({
+    ...current,
+    sections: current.sections.map((item) => item.id === selectedId ? { ...item, data: { ...item.data, ...patch } } : item),
+  }));
 
-  function move(id: string, direction: -1 | 1) {
-    const sections = [...portfolio.sections];
-    const from = sections.findIndex((item) => item.id === id);
-    const to = from + direction;
-    if (to < 0 || to >= sections.length) return;
-    [sections[from], sections[to]] = [sections[to], sections[from]];
-    update({ sections });
-  }
-
-  function addSection(type: SectionType) {
-    const created = defaultSection(type);
-    update({ sections: [...portfolio.sections, created] });
-    setSelectedId(created.id);
-  }
-
-  function removeSection(id: string) {
-    const sections = portfolio.sections.filter((item) => item.id !== id);
-    update({ sections });
-    if (selectedId === id) setSelectedId(sections[0]?.id);
-  }
-
-  async function save() {
-    setSaving(true); setSaved(false); setError("");
-    const response = await fetch(`/api/portfolios/${portfolio.id}`, {
+  const save = useCallback(async (next: EditorPortfolio, visible = false) => {
+    if (visible) setSaving(true);
+    setSaved(false); setError("");
+    const response = await fetch(`/api/portfolios/${next.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: portfolio.title, slug: portfolio.slug, status: portfolio.status, theme: portfolio.theme, sections: portfolio.sections }),
+      body: JSON.stringify({ title: next.title, slug: next.slug, status: next.status, theme: next.theme, sections: next.sections }),
     });
     const data = await response.json();
-    setSaving(false);
+    if (visible) setSaving(false);
     if (!response.ok) return setError(data.error ?? "Enregistrement impossible.");
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    const timer = window.setTimeout(() => void save(portfolio), 500);
+    return () => window.clearTimeout(timer);
+  }, [portfolio, save]);
+
+  function reorder(targetId: string) {
+    if (!draggedId.current || draggedId.current === targetId) return;
+    const sections = [...portfolio.sections];
+    const from = sections.findIndex((item) => item.id === draggedId.current);
+    const to = sections.findIndex((item) => item.id === targetId);
+    const [moved] = sections.splice(from, 1);
+    sections.splice(to, 0, moved);
+    update({ sections: sections.map((item, order) => ({ ...item, order })) });
+    draggedId.current = null;
+  }
+
+  async function publish() {
+    const next = { ...portfolio, status: "published" as const };
+    setPortfolio(next);
+    if (!(await save(next, true))) return;
+    await navigator.clipboard.writeText(`${window.location.origin}/p/${next.slug}`);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2200);
   }
 
   return (
@@ -71,8 +89,9 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
         </div>
         <div className="flex items-center gap-2">
           {error && <span className="hidden text-xs font-semibold text-red-600 md:inline">{error}</span>}
-          {portfolio.status !== "draft" && <Link target="_blank" href={`/p/${portfolio.slug}`} className="btn btn-light !min-h-9 !px-3 !py-1"><ExternalLink size={15} /><span className="hidden sm:inline">Voir</span></Link>}
-          <button onClick={save} disabled={saving} className="btn btn-dark !min-h-9 !px-4 !py-1">{saving ? <LoaderCircle className="animate-spin" size={16} /> : saved ? <Check size={16} /> : <Save size={16} />}<span className="hidden sm:inline">{saved ? "Enregistré" : "Enregistrer"}</span></button>
+          <span className="hidden items-center gap-1 text-xs font-semibold text-black/40 md:flex">{saving ? <LoaderCircle className="animate-spin" size={14} /> : saved ? <Check size={14} /> : null}{saving ? "Enregistrement…" : saved ? "Enregistré" : "Sauvegarde auto"}</span>
+          {portfolio.status === "published" && <Link target="_blank" href={`/p/${portfolio.slug}`} className="btn btn-light !min-h-9 !px-3 !py-1"><ExternalLink size={15} /><span className="hidden sm:inline">Voir</span></Link>}
+          <button onClick={publish} disabled={saving} className="btn btn-dark !min-h-9 !px-4 !py-1">{saving ? <LoaderCircle className="animate-spin" size={16} /> : copied ? <Copy size={16} /> : <Rocket size={16} />}<span className="hidden sm:inline">{copied ? "Lien copié !" : portfolio.status === "published" ? "Copier le lien" : "Publier"}</span></button>
         </div>
       </header>
 
@@ -87,30 +106,39 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
             {panel === "content" && <>
               <p className="label">Sections</p>
               <div className="space-y-2">
-                {portfolio.sections.map((section, index) => (
-                  <div key={section.id} className={`group flex items-center gap-1 rounded-xl border p-1.5 ${selectedId === section.id ? "border-black bg-[#f7f5ef]" : "border-black/10"}`}>
-                    <button onClick={() => setSelectedId(section.id)} className="flex min-w-0 flex-1 items-center gap-2 p-1.5 text-left text-sm font-bold"><GripVertical size={15} className="shrink-0 text-black/30" /><span className="truncate">{section.title || sectionNames[section.type]}</span></button>
-                    <button onClick={() => move(section.id, -1)} disabled={index === 0} className="p-1 disabled:opacity-20" aria-label="Monter"><ArrowUp size={14} /></button>
-                    <button onClick={() => move(section.id, 1)} disabled={index === portfolio.sections.length - 1} className="p-1 disabled:opacity-20" aria-label="Descendre"><ArrowDown size={14} /></button>
-                    <button onClick={() => removeSection(section.id)} className="p-1 text-red-500" aria-label="Supprimer"><Trash2 size={14} /></button>
+                {portfolio.sections.map((section) => (
+                  <div
+                    key={section.id}
+                    draggable
+                    onDragStart={() => { draggedId.current = section.id; }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => reorder(section.id)}
+                    className={`group flex cursor-grab items-center gap-1 rounded-xl border p-1.5 active:cursor-grabbing ${selectedId === section.id ? "border-black bg-[#f7f5ef]" : "border-black/10"}`}
+                  >
+                    <button onClick={() => setSelectedId(section.id)} className="flex min-w-0 flex-1 items-center gap-2 p-1.5 text-left text-sm font-bold"><GripVertical size={15} className="shrink-0 text-black/30" /><span className="truncate">{sectionNames[section.type as ProductSectionType]}</span></button>
+                    <span className="pr-2 text-[10px] font-bold text-black/25">{(section.order ?? 0) + 1}</span>
                   </div>
                 ))}
               </div>
-              <details className="mt-3">
-                <summary className="btn btn-light w-full list-none !min-h-10 !py-1"><Plus size={15} /> Ajouter une section</summary>
-                <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl bg-[#f4f2ec] p-2">
-                  {(Object.keys(sectionNames) as SectionType[]).map((type) => <button key={type} onClick={() => addSection(type)} className="rounded-lg bg-white p-2 text-left text-xs font-bold hover:bg-[#d8ff5f]">{sectionNames[type]}</button>)}
-                </div>
-              </details>
-              {selected && <SectionForm section={selected} updateSection={updateSection} updateData={updateData} />}
+              <p className="mt-3 text-xs leading-relaxed text-black/40">Glissez-déposez pour modifier l’ordre. Les 4 sections sont fixes dans cette version.</p>
+              {selected && <SectionForm section={selected} updateData={updateData} />}
             </>}
             {panel === "theme" && <ThemePanel portfolio={portfolio} update={update} />}
-            {panel === "settings" && <SettingsPanel portfolio={portfolio} update={update} save={save} />}
+            {panel === "settings" && <SettingsPanel portfolio={portfolio} update={update} publish={publish} copied={copied} />}
           </div>
         </aside>
         <section className="hidden min-h-0 overflow-auto p-5 md:block">
           <div className="mx-auto min-h-full max-w-[1280px] overflow-hidden rounded-xl border border-black/15 bg-white shadow-xl">
-            <PortfolioView title={portfolio.title} theme={portfolio.theme} sections={portfolio.sections} preview />
+            <PortfolioView
+              title={portfolio.title}
+              theme={portfolio.theme}
+              sections={portfolio.sections}
+              preview
+              onInlineEdit={(sectionId, field, value) => setPortfolio((current) => ({
+                ...current,
+                sections: current.sections.map((item) => item.id === sectionId ? { ...item, data: { ...item.data, [field]: value } } : item),
+              }))}
+            />
           </div>
         </section>
       </div>
@@ -118,28 +146,41 @@ export function PortfolioEditor({ initialPortfolio }: { initialPortfolio: Editor
   );
 }
 
-function SectionForm({ section, updateSection, updateData }: {
+function SectionForm({ section, updateData }: {
   section: PortfolioSection;
-  updateSection: (patch: Partial<PortfolioSection>) => void;
   updateData: (patch: Partial<PortfolioSection["data"]>) => void;
 }) {
   const changeItem = (index: number, patch: Record<string, string>) => updateData({ items: (section.data.items ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item) });
+  const changeLink = (index: number, patch: Record<string, string>) => updateData({ links: (section.data.links ?? []).map((link, linkIndex) => linkIndex === index ? { ...link, ...patch } : link) });
   return <div className="mt-6 border-t border-black/10 pt-5">
-    <p className="label text-[#6c5ce7]">Modifier · {sectionNames[section.type]}</p>
+    <p className="label text-[#6c5ce7]">Modifier · {sectionNames[section.type as ProductSectionType]}</p>
+    <p className="mb-4 text-xs text-black/40">Les textes principaux sont aussi modifiables directement dans l’aperçu.</p>
     <div className="space-y-3">
-      <Field label="Titre de section" value={section.title} onChange={(value) => updateSection({ title: value })} />
-      {section.type === "hero" && <Field label="Sur-titre" value={section.data.eyebrow} onChange={(eyebrow) => updateData({ eyebrow })} />}
-      {!itemSections.includes(section.type) && section.type !== "contact" && <Field label="Grand titre" value={section.data.heading} onChange={(heading) => updateData({ heading })} />}
-      {!itemSections.includes(section.type) && <Field area label="Texte" value={section.data.text} onChange={(text) => updateData({ text })} />}
-      {(section.type === "hero") && <Field label="Appel à l’action" value={section.data.cta} onChange={(cta) => updateData({ cta })} />}
-      {(section.type === "about" || section.type === "custom") && <Field label="URL de l’image" value={section.data.image} onChange={(image) => updateData({ image })} placeholder="https://…" />}
-      {section.type === "contact" && <><Field label="E-mail" value={section.data.email} onChange={(email) => updateData({ email })} /><Field label="Lieu" value={section.data.location} onChange={(location) => updateData({ location })} /></>}
-      {itemSections.includes(section.type) && <>
+      {section.type === "hero" && <>
+        <Field label="Titre" value={section.data.heading} onChange={(heading) => updateData({ heading })} />
+        <Field area label="Sous-titre" value={section.data.text} onChange={(text) => updateData({ text })} />
+        <Field label="Libellé du bouton" value={section.data.cta} onChange={(cta) => updateData({ cta })} />
+        <Field label="Lien du bouton" value={section.data.ctaUrl} onChange={(ctaUrl) => updateData({ ctaUrl })} placeholder="#contact ou https://…" />
+        <Field label="URL de l’image (optionnel)" value={section.data.image} onChange={(image) => updateData({ image })} placeholder="https://…" />
+      </>}
+      {section.type === "about" && <>
+        <Field label="Titre" value={section.data.heading} onChange={(heading) => updateData({ heading })} />
+        <Field area label="Présentation" value={section.data.text} onChange={(text) => updateData({ text })} />
+        <Field label="URL de l’image (optionnel)" value={section.data.image} onChange={(image) => updateData({ image })} placeholder="https://…" />
+      </>}
+      {section.type === "projects" && <>
         {(section.data.items ?? []).map((item, index) => <div key={index} className="rounded-xl bg-[#f4f2ec] p-3">
           <div className="mb-2 flex items-center justify-between"><span className="text-xs font-black">Élément {index + 1}</span><button onClick={() => updateData({ items: section.data.items?.filter((_, i) => i !== index) })} className="text-red-500"><X size={14} /></button></div>
-          <div className="space-y-2"><Field label="Titre" value={item.title} onChange={(title) => changeItem(index, { title })} /><Field label="Sous-titre" value={item.subtitle} onChange={(subtitle) => changeItem(index, { subtitle })} /><Field area label="Description" value={item.description} onChange={(description) => changeItem(index, { description })} />{section.type === "projects" && <Field label="URL de l’image" value={item.image} onChange={(image) => changeItem(index, { image })} />}</div>
+          <div className="space-y-2"><Field label="Titre" value={item.title} onChange={(title) => changeItem(index, { title })} /><Field area label="Description" value={item.description} onChange={(description) => changeItem(index, { description })} /><Field label="URL de l’image" value={item.image} onChange={(image) => changeItem(index, { image })} /><Field label="Lien du projet" value={item.url} onChange={(url) => changeItem(index, { url })} /></div>
         </div>)}
         <button onClick={() => updateData({ items: [...(section.data.items ?? []), { title: "Nouvel élément", description: "" }] })} className="btn btn-light w-full !min-h-9 !py-1"><Plus size={14} /> Ajouter un élément</button>
+      </>}
+      {section.type === "contact" && <>
+        <Field label="E-mail" value={section.data.email} onChange={(email) => updateData({ email })} />
+        <Field label="Téléphone (optionnel)" value={section.data.phone} onChange={(phone) => updateData({ phone })} />
+        {(section.data.links ?? []).map((link, index) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 rounded-xl bg-[#f4f2ec] p-3"><Field label="Libellé" value={link.label} onChange={(label) => changeLink(index, { label })} /><Field label="URL" value={link.url} onChange={(url) => changeLink(index, { url })} /><button aria-label="Supprimer le lien" onClick={() => updateData({ links: section.data.links?.filter((_, i) => i !== index) })} className="mt-4 text-red-500"><X size={14} /></button></div>)}
+        <button onClick={() => updateData({ links: [...(section.data.links ?? []), { label: "Nouveau lien", url: "https://" }] })} className="btn btn-light w-full !min-h-9 !py-1"><Plus size={14} /> Ajouter un lien</button>
+        <label className="flex items-center justify-between rounded-xl border border-black/10 p-3 text-sm font-bold"><span>Activer le formulaire de message</span><input type="checkbox" checked={section.data.messageEnabled ?? false} onChange={(event) => updateData({ messageEnabled: event.target.checked })} className="size-4 accent-black" /></label>
       </>}
     </div>
   </div>;
@@ -168,15 +209,31 @@ function Choice({ label, value, choices, onChange }: { label: string; value: str
   return <div><p className="label">{label}</p><div className="grid grid-cols-3 gap-2">{choices.map(([id, text]) => <button key={id} onClick={() => onChange(id)} className={`rounded-lg border p-2 text-xs font-bold ${value === id ? "border-black bg-black text-white" : "border-black/10"}`}>{text}</button>)}</div></div>;
 }
 
-function SettingsPanel({ portfolio, update, save }: { portfolio: EditorPortfolio; update: (patch: Partial<EditorPortfolio>) => void; save: () => void }) {
+function SettingsPanel({ portfolio, update, publish, copied }: { portfolio: EditorPortfolio; update: (patch: Partial<EditorPortfolio>) => void; publish: () => void; copied: boolean }) {
   return <div><p className="label text-[#6c5ce7]">Visibilité</p><h2 className="mb-6 text-2xl font-black">Prêt à être vu ?</h2>
     <Field label="Adresse publique" value={portfolio.slug} onChange={(slug) => update({ slug: slug.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
     <p className="mt-1 text-xs text-black/40">/p/{portfolio.slug}</p>
-    <div className="mt-6 space-y-2">{([
-      ["draft", "Brouillon", "Visible par vous uniquement."],
-      ["unlisted", "Non répertorié", "Accessible avec le lien, absent des moteurs de recherche."],
-      ["published", "Publié", "Public et indexable."],
-    ] as [PortfolioStatus, string, string][]).map(([status, title, text]) => <button key={status} onClick={() => update({ status })} className={`w-full rounded-xl border p-4 text-left ${portfolio.status === status ? "border-black bg-[#d8ff5f]" : "border-black/10"}`}><span className="block font-black">{title}</span><span className="text-xs opacity-60">{text}</span></button>)}</div>
-    <button onClick={save} className="btn btn-dark mt-6 w-full">{portfolio.status === "published" ? "Enregistrer la publication" : "Enregistrer"}</button>
+    <div className={`mt-6 rounded-xl border p-4 ${portfolio.status === "published" ? "border-green-300 bg-green-50" : "border-black/10 bg-[#f4f2ec]"}`}>
+      <span className="block font-black">{portfolio.status === "published" ? "Portfolio publié" : "Brouillon privé"}</span>
+      <span className="text-xs opacity-60">{portfolio.status === "published" ? "La page publique est accessible à tous." : "La page publique reste inaccessible jusqu’à publication."}</span>
+    </div>
+    <button onClick={publish} className="btn btn-dark mt-6 w-full">{copied ? <><Copy size={16} /> Lien copié !</> : portfolio.status === "published" ? <><Copy size={16} /> Copier le lien public</> : <><Rocket size={16} /> Publier maintenant</>}</button>
   </div>;
+}
+
+function normalizeSections(sections: PortfolioSection[]): PortfolioSection[] {
+  const sorted = [...sections].sort((a, b) => (a.order ?? sections.indexOf(a)) - (b.order ?? sections.indexOf(b)));
+  const productSections = sorted.filter((item) => fixedTypes.includes(item.type as ProductSectionType));
+  const fallbacks: Record<ProductSectionType, PortfolioSection["data"]> = {
+    hero: { heading: "Votre grand titre", text: "Présentez votre univers.", cta: "Voir mes projets", ctaUrl: "#projets" },
+    projects: { items: [{ title: "Premier projet", description: "Présentez ce que vous avez réalisé." }] },
+    about: { heading: "À propos", text: "Racontez votre parcours et votre approche." },
+    contact: { email: "vous@example.com", phone: "", links: [], messageEnabled: true },
+  };
+  for (const type of fixedTypes) {
+    if (!productSections.some((item) => item.type === type)) {
+      productSections.push({ id: crypto.randomUUID(), type, title: sectionNames[type], data: fallbacks[type] });
+    }
+  }
+  return productSections.slice(0, 4).map((item, order) => ({ ...item, order }));
 }

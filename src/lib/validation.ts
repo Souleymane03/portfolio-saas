@@ -23,6 +23,7 @@ export const portfolioUpdateSchema = z.object({
   }),
   sections: z.array(z.object({
     id: z.string(),
+    order: z.number().int().nonnegative().optional(),
     type: z.enum(["hero", "about", "projects", "experience", "skills", "testimonials", "contact", "custom"]),
     title: z.string(),
     data: z.object({
@@ -31,8 +32,15 @@ export const portfolioUpdateSchema = z.object({
       image: z.string().optional(),
       eyebrow: z.string().optional(),
       cta: z.string().optional(),
+      ctaUrl: z.string().optional(),
       email: z.string().optional(),
+      phone: z.string().optional(),
       location: z.string().optional(),
+      links: z.array(z.object({
+        label: z.string(),
+        url: z.string(),
+      })).optional(),
+      messageEnabled: z.boolean().optional(),
       items: z.array(z.object({
         title: z.string(),
         subtitle: z.string().optional(),

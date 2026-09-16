@@ -44,9 +44,9 @@ export function CreatePortfolio({ triggerClass = "" }: { triggerClass?: string }
               {templates.map((template) => (
                 <button type="button" key={template.id} onClick={() => setSelected(template.id)} className={`overflow-hidden rounded-xl border-2 text-left transition ${selected === template.id ? "border-black shadow-[4px_4px_0_#171717]" : "border-transparent"}`}>
                   <div className="h-28 p-4 text-xl font-black" style={{ background: template.theme.background, color: template.theme.text }}>
-                    <span className="text-[9px] uppercase tracking-widest" style={{ color: template.accent }}>{template.genre}</span><br />{template.name}
+                    <span className="text-[9px] uppercase tracking-widest" style={{ color: template.accent }}>{template.id.replace("_", " · ")}</span><br />{template.name}
                   </div>
-                  <div className="flex items-center justify-between bg-white p-3"><span className="text-sm font-bold">{template.name}</span>{selected === template.id && <Check size={16} />}</div>
+                  <div className="flex items-center justify-between bg-white p-3"><span><span className="block text-sm font-bold">{template.name}</span><span className="text-[10px] text-black/45">{template.genre}</span></span>{selected === template.id && <Check size={16} />}</div>
                 </button>
               ))}
             </div>

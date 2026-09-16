@@ -57,12 +57,12 @@ export default function Home() {
             <div key={template.id} className="card group overflow-hidden">
               <div className="flex h-48 items-end p-5 transition-transform group-hover:scale-[1.02]" style={{ background: template.theme.background, color: template.theme.text }}>
                 <div className="w-full">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: template.accent }}>{template.genre}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: template.accent }}>{template.id.replace("_", " · ")}</span>
                   <div className="mt-3 text-3xl font-black">{index === 0 ? "Make it memorable." : index === 1 ? "STORIES / 26" : index === 2 ? "Hello, je crée." : "Vos mots comptent."}</div>
                   <div className="mt-5 h-1 w-12" style={{ background: template.accent }} />
                 </div>
               </div>
-              <div className="p-5"><h3 className="text-xl font-black">{template.name}</h3><p className="mt-2 text-sm leading-relaxed text-black/55">{template.description}</p></div>
+              <div className="p-5"><h3 className="text-xl font-black">{template.name} <span className="text-xs font-semibold text-black/35">· {template.genre}</span></h3><p className="mt-2 text-sm leading-relaxed text-black/55">{template.description}</p></div>
             </div>
           ))}
         </div>

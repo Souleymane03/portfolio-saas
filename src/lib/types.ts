@@ -8,8 +8,11 @@ export type SectionType =
   | "contact"
   | "custom";
 
+export type ProductSectionType = "hero" | "projects" | "about" | "contact";
+
 export type PortfolioSection = {
   id: string;
+  order?: number;
   type: SectionType;
   title: string;
   data: {
@@ -18,8 +21,12 @@ export type PortfolioSection = {
     image?: string;
     eyebrow?: string;
     cta?: string;
+    ctaUrl?: string;
     email?: string;
+    phone?: string;
     location?: string;
+    links?: Array<{ label: string; url: string }>;
+    messageEnabled?: boolean;
     items?: Array<{
       title: string;
       subtitle?: string;
